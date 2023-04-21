@@ -1,7 +1,21 @@
-#ifndef _FERSpackunpack_h
-#define _FERSpackunpack_h
+#ifndef _FERS_EUDAQ_h
+#define _FERS_EUDAQ_h
 
 #include <vector>
+
+#define DTQ_STAIRCASE 10
+// staircase datatype
+typedef struct {
+	uint16_t threshold;
+	uint16_t dwell_time; // in seconds, divide hitcnt by this to get rate
+	uint32_t chmean; // over channels, no division by time
+	uint16_t shapingt; // enum, see FERS_Registers.h
+	float    HV;
+	uint32_t Tor_cnt;
+	uint32_t Qor_cnt;
+	uint32_t hitcnt[FERSLIB_MAX_NCH];
+} StaircaseEvent_t;
+
 
 void FERSpack(int nbits, uint32_t input, std::vector<uint8_t> *vec);
 uint16_t FERSunpack16(int index, std::vector<uint8_t> vec);
@@ -22,7 +36,6 @@ uint64_t FERSunpack64(int index, std::vector<uint8_t> vec);
 //  std::printf("FERSunpack : num16r = %x\n", num16r);
 
 //////////////////////////
-<<<<<<< HEAD
 // use this to pack every kind of event
 void FERSpackevent(void* Event, int dataqualifier, std::vector<uint8_t> *vec);
 //////////////////////////
@@ -46,28 +59,21 @@ WaveEvent_t FERSunpack_waveevent(std::vector<uint8_t> *vec);
 
 void FERSpack_testevent(void* Event, std::vector<uint8_t> *vec);
 TestEvent_t FERSunpack_testevent(std::vector<uint8_t> *vec);
-=======
-void FERSpackevent(void* Event, int dataqualifier, std::vector<uint8_t> *vec);
-void FERSunpackevent(void* Event, int dataqualifier, std::vector<uint8_t> *vec);
-//////////////////////////
 
-void FERSpack_listevent(void* Event, std::vector<uint8_t> *vec);
-void FERSunpack_listevent(void* Event, std::vector<uint8_t> *vec);
+/////////////////
 
-void FERSpack_tspectevent(void* Event, std::vector<uint8_t> *vec);
-void FERSunpack_tspectevent(void* Event, std::vector<uint8_t> *vec);
+void FERSpack_staircaseevent(void* Event, std::vector<uint8_t> *vec);
+StaircaseEvent_t FERSunpack_staircaseevent(std::vector<uint8_t> *vec);
 
-void FERSpack_countevent(void* Event, std::vector<uint8_t> *vec);
-void FERSunpack_countevent(void* Event, std::vector<uint8_t> *vec);
+/////////////////
+// fill "data" with some info
+void make_header(int handle, uint8_t x_pixel, uint8_t y_pixel, int DataQualifier, std::vector<uint8_t> *data);
 
-void FERSpack_waveevent(void* Event, std::vector<uint8_t> *vec);
-void FERSunpack_waveevent(void* Event, std::vector<uint8_t> *vec);
+// reads back essential header info (see params)
+// prints them w/ board ID info with EUDAQ_WARN
+// returns index at which raw data starts
+int read_header(std::vector<uint8_t> *data, uint8_t *x_pixel, uint8_t *y_pixel, uint8_t *DataQualifier);
 
-void FERSpack_testevent(void* Event, std::vector<uint8_t> *vec);
-void FERSunpack_testevent(void* Event, std::vector<uint8_t> *vec);
-
-void FERSpack_spectevent(void* Event, std::vector<uint8_t> *vec);
-void FERSunpack_spectevent(void* Event, std::vector<uint8_t> *vec);
->>>>>>> 9fa59b14dcccc88ac13aa373662e2cd43a77e68c
+void dump_vec(std::string title, std::vector<uint8_t> *vec, int limit=0);
 
 #endif

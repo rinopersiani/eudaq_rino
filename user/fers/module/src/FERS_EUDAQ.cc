@@ -1,17 +1,21 @@
+#include "eudaq/Producer.hh"
+#include "FERS_Registers.h"
+#include "FERSlib.h"
+#include <iostream>
+//#include <ratio>
+#include <chrono>
+#include <thread>
+//#include <random>
 #include <stdlib.h>
 #include <stdint.h>
-<<<<<<< HEAD
 #include <stdio.h>
-#include <iostream>
 #include "eudaq/Monitor.hh"
 
-#include "FERSlib.h"
-#include "FERSpackunpack.h"
-=======
+#include "configure.h"
+//#include "JanusC.h"
 
-#include "FERSpackunpack.h"
-#include "FERSlib.h"
->>>>>>> 9fa59b14dcccc88ac13aa373662e2cd43a77e68c
+#include "DataSender.hh"
+#include "FERS_EUDAQ.h"
 
 // puts a nbits (16, 32, 64) integer into an 8 bits vector
 void FERSpack(int nbits, uint32_t input, std::vector<uint8_t> *vec)
@@ -37,20 +41,21 @@ uint32_t FERSunpack32(int index, std::vector<uint8_t> vec)
 {
 	uint32_t out = vec.at(index) 
                   +vec.at(index+1) *256 
-                  +vec.at(index+2) *256*256 
-                  +vec.at(index+3) *256*256*256;
+                  +vec.at(index+2) *65536 
+                  +vec.at(index+3) *16777216;
 	return out;
 }
 uint64_t FERSunpack64(int index, std::vector<uint8_t> vec)
 {
 	uint64_t out = vec.at(index) 
-                  +vec.at(index+1) *256 
-                  +vec.at(index+2) *256*256 
-                  +vec.at(index+3) *256*256*256 
-                  +vec.at(index+4) *256*256*256*256
-                  +vec.at(index+5) *256*256*256*256*256
-                  +vec.at(index+6) *256*256*256*256*256*256
-                  +vec.at(index+7) *256*256*256*256*256*256*256;
+		+vec.at(index+1) *256 
+		+vec.at(index+2) *65536
+		+vec.at(index+3) *16777216
+		+( vec.at(index+4) 
+		  +vec.at(index+5) *256
+		  +vec.at(index+6) *65536
+		  +vec.at(index+7) *16777216
+		 )*4294967296;
 	return out;
 }
 
@@ -75,49 +80,20 @@ void FERSpackevent(void* Event, int dataqualifier, std::vector<uint8_t> *vec)
       break;
     case (DTQ_TEST): // Test Mode (fixed data patterns)
       FERSpack_testevent(Event, vec);
+      break;
+    case (DTQ_STAIRCASE): // staircase event
+      FERSpack_staircaseevent(Event, vec);
   }
 }
 
-<<<<<<< HEAD
-=======
-
-void FERSunpackevent(void* Event, int dataqualifier, std::vector<uint8_t> *vec)
-{
-  switch( dataqualifier )
-  {
-    case (DTQ_SPECT): // Spectroscopy mode
-      FERSunpack_spectevent(Event, vec);
-      break;
-    case (DTQ_TIMING): // List Event (Timing Mode only)
-      FERSunpack_listevent(Event, vec);
-      break;
-    case (DTQ_TSPECT): // Spectroscopy + Timing Mode (Energy + Tstamp)
-      FERSunpack_tspectevent(Event, vec);
-      break;
-    case (DTQ_COUNT):	// Counting Mode (MCS)
-      FERSunpack_countevent(Event, vec);
-      break;
-    case (DTQ_WAVE): // Waveform Mode
-      FERSunpack_waveevent(Event, vec);
-      break;
-    case (DTQ_TEST): // Test Mode (fixed data patterns)
-      FERSunpack_testevent(Event, vec);
-  }
-}
-
->>>>>>> 9fa59b14dcccc88ac13aa373662e2cd43a77e68c
 //////////////////////////
 
 // Spectroscopy event
 void FERSpack_spectevent(void* Event, std::vector<uint8_t> *vec)
 {
-<<<<<<< HEAD
   int x_pixel = 8;
   int y_pixel = 8;
   int nchan = x_pixel*y_pixel;
-=======
-  int nchan = 64;
->>>>>>> 9fa59b14dcccc88ac13aa373662e2cd43a77e68c
   // temporary event, used to correctly interpret the Event.
   // The same technique is used in the other pack routines as well
   SpectEvent_t *tmpEvent = (SpectEvent_t*)Event;
@@ -132,7 +108,6 @@ void FERSpack_spectevent(void* Event, std::vector<uint8_t> *vec)
   uint32_t tstamp[nchan]  ;
   uint16_t ToT[nchan]     ;
 
-<<<<<<< HEAD
   //std::cout<<"***FERSpack: initial size of vec: "<< vec->size() <<std::endl;
   FERSpack( 8*sizeof(double), tstamp_us,  vec);
   //std::cout<<"***FERSpack: current size of vec: "<< vec->size() <<std::endl;
@@ -142,61 +117,35 @@ void FERSpack_spectevent(void* Event, std::vector<uint8_t> *vec)
   //std::cout<<"***FERSpack: current size of vec: "<< vec->size() <<std::endl;
   FERSpack( 64,             qdmask,     vec);
   //std::cout<<"***FERSpack: current size of vec: "<< vec->size() <<std::endl;
-=======
-  FERSpack( sizeof(double), tstamp_us,  vec);
-  FERSpack( 64,             trigger_id, vec);
-  FERSpack( 64,             chmask,     vec);
-  FERSpack( 64,             qdmask,     vec);
->>>>>>> 9fa59b14dcccc88ac13aa373662e2cd43a77e68c
   for (size_t i = 0; i<nchan; i++){
     energyHG[i] = tmpEvent->energyHG[i];
     FERSpack( 16,energyHG[i], vec);
   }
-<<<<<<< HEAD
   //std::cout<<"***FERSpack: filled "<< nchan <<" * 2 bytes, current size of vec: "<< vec->size() <<std::endl;
-=======
->>>>>>> 9fa59b14dcccc88ac13aa373662e2cd43a77e68c
   for (size_t i = 0; i<nchan; i++){
     energyLG[i] = tmpEvent->energyLG[i];
     FERSpack( 16,energyLG[i], vec);
   }
-<<<<<<< HEAD
   //std::cout<<"***FERSpack: filled "<< nchan <<" * 2 bytes, current size of vec: "<< vec->size() <<std::endl;
-=======
->>>>>>> 9fa59b14dcccc88ac13aa373662e2cd43a77e68c
   for (size_t i = 0; i<nchan; i++){
     tstamp[i]   = tmpEvent->tstamp[i]  ;
     FERSpack( 32,tstamp[i]  , vec);
   }
-<<<<<<< HEAD
   //std::cout<<"***FERSpack: filled "<< nchan <<" * 4 bytes, current size of vec: "<< vec->size() <<std::endl;
-=======
->>>>>>> 9fa59b14dcccc88ac13aa373662e2cd43a77e68c
   for (size_t i = 0; i<nchan; i++){
     ToT[i]      = tmpEvent->ToT[i]     ;
     FERSpack( 16,ToT[i]     , vec);
   }
-<<<<<<< HEAD
   //std::cout<<"***FERSpack: filled "<< nchan <<" * 2 bytes, current size of vec: "<< vec->size() <<std::endl;
-=======
->>>>>>> 9fa59b14dcccc88ac13aa373662e2cd43a77e68c
 
   //      //dump on console
   //      std::cout<< "tstamp_us  "<< tstamp_us  <<std::endl;
   //      std::cout<< "trigger_id "<< trigger_id <<std::endl;
-<<<<<<< HEAD
   //      std::cout<< "chmask     "<< chmask     <<std::endl;
   //      std::cout<< "qdmask     "<< qdmask     <<std::endl;
   //
   //      for(size_t i = 0; i < y_pixel; ++i) {
   //        for(size_t n = 0; n < x_pixel; ++n){
-=======
-  //      //std::cout<< "chmask     "<< chmask     <<std::endl;
-  //      //std::cout<< "qdmask     "<< qdmask     <<std::endl;
-  //
-  //      for(size_t i = 0; i < y_pixel; ++i) {
-  //        for(size_t n = 0; n < 2*x_pixel; ++n){
->>>>>>> 9fa59b14dcccc88ac13aa373662e2cd43a77e68c
   //          //std::cout<< (int)hit[n+i*x_pixel] <<"_";
   //          std::cout<< (int)energyHG[n+i*x_pixel] <<"_";
   //          //std::cout<< (int)energyLG[n+i*x_pixel] <<"_";
@@ -209,7 +158,6 @@ void FERSpack_spectevent(void* Event, std::vector<uint8_t> *vec)
 }
 
 
-<<<<<<< HEAD
 //void FERSunpack_spectevent(SpectEvent_t* Event, std::vector<uint8_t> *vec)
 SpectEvent_t FERSunpack_spectevent(std::vector<uint8_t> *vec)
 {
@@ -265,41 +213,6 @@ SpectEvent_t FERSunpack_spectevent(std::vector<uint8_t> *vec)
   if (debug) EUDAQ_WARN("* index: "+std::to_string(index)+" read uint16 ToT[64] ");
 
   return tmpEvent;
-=======
-void FERSunpack_spectevent(void* Event, std::vector<uint8_t> *vec)
-{
-  int nchan = 64;
-  std::vector<uint8_t> data( vec->begin(), vec->end() );
-  SpectEvent_t *tmpEvent = (SpectEvent_t*)Event;
-
-  int index = 0;
-  int sd = sizeof(double);
-  switch(sd)
-  {
-    case 8:
-      tmpEvent->tstamp_us = data.at(index); break;
-    case 16:
-      tmpEvent->tstamp_us = FERSunpack16(index, data); break;
-    case 32:
-      tmpEvent->tstamp_us = FERSunpack32(index, data);
-  }
-  index += sd/8; // each element of data is uint8_t
-  tmpEvent->trigger_id = FERSunpack64( index,data); index += 8;
-  tmpEvent->chmask     = FERSunpack64( index,data); index += 8;
-  tmpEvent->qdmask     = FERSunpack64( index,data); index += 8;
-  for (int i=0; i<nchan; ++i) {
-    tmpEvent->energyHG[i] = FERSunpack16(index,data); index += 2;
-  }
-  for (int i=0; i<nchan; ++i) {
-    tmpEvent->energyLG[i] = FERSunpack16(index,data); index += 2;
-  }
-  for (int i=0; i<nchan; ++i) {
-    tmpEvent->tstamp[i] = FERSunpack32(index,data); index += 4;
-  }
-  for (int i=0; i<nchan; ++i) {
-    tmpEvent->ToT[i] = FERSunpack16(index,data); index += 2;
-  }
->>>>>>> 9fa59b14dcccc88ac13aa373662e2cd43a77e68c
 }
 
 
@@ -330,7 +243,6 @@ void FERSpack_listevent(void* Event, std::vector<uint8_t> *vec)
     FERSpack( 16,ToT[i], vec);
   }
 }
-<<<<<<< HEAD
 ListEvent_t FERSunpack_listevent(std::vector<uint8_t> *vec)
 {
   std::vector<uint8_t> data( vec->begin(), vec->end() );
@@ -347,23 +259,6 @@ ListEvent_t FERSunpack_listevent(std::vector<uint8_t> *vec)
     tmpEvent.ToT[i] = FERSunpack16(index,data); index += 2;
   }
   return tmpEvent;
-=======
-void FERSunpack_listevent(void* Event, std::vector<uint8_t> *vec)
-{
-  std::vector<uint8_t> data( vec->begin(), vec->end() );
-  ListEvent_t* tmpEvent = (ListEvent_t*) Event;
-  int index = 0;
-  tmpEvent->nhits = FERSunpack16(index, data); index +=2;
-  for (int i=0; i<MAX_LIST_SIZE; ++i) {
-    tmpEvent->channel[i] = data.at(index); index += 1;
-  }
-  for (int i=0; i<MAX_LIST_SIZE; ++i) {
-    tmpEvent->tstamp[i] = FERSunpack32(index,data); index += 4;
-  }
-  for (int i=0; i<MAX_LIST_SIZE; ++i) {
-    tmpEvent->ToT[i] = FERSunpack16(index,data); index += 2;
-  }
->>>>>>> 9fa59b14dcccc88ac13aa373662e2cd43a77e68c
 }
 
 //////////////////////////
@@ -383,11 +278,7 @@ void FERSpack_tspectevent(void* Event, std::vector<uint8_t> *vec)
   uint32_t tstamp[nchan]  ;
   uint16_t ToT[nchan]     ;
 
-<<<<<<< HEAD
   FERSpack( 8*sizeof(double), tstamp_us,  vec);
-=======
-  FERSpack( sizeof(double), tstamp_us,  vec);
->>>>>>> 9fa59b14dcccc88ac13aa373662e2cd43a77e68c
   FERSpack( 64,             trigger_id, vec);
   FERSpack( 64,             chmask,     vec);
   FERSpack( 64,             qdmask,     vec);
@@ -409,7 +300,6 @@ void FERSpack_tspectevent(void* Event, std::vector<uint8_t> *vec)
   }
 
 }
-<<<<<<< HEAD
 SpectEvent_t FERSunpack_tspectevent(std::vector<uint8_t> *vec)
 {
   int nchan = 64;
@@ -425,7 +315,7 @@ SpectEvent_t FERSunpack_tspectevent(std::vector<uint8_t> *vec)
     case 16:
       tmpEvent.tstamp_us = FERSunpack16(index, data); break;
     case 32:
-      tmpEvent.tstamp_us = FERSunpack32(index, data);
+      tmpEvent.tstamp_us = FERSunpack32(index, data); break;
     case 64:
       tmpEvent.tstamp_us = FERSunpack64(index, data);
   }
@@ -446,41 +336,6 @@ SpectEvent_t FERSunpack_tspectevent(std::vector<uint8_t> *vec)
     tmpEvent.ToT[i] = FERSunpack16(index,data); index += 2;
   }
   return tmpEvent;
-=======
-void FERSunpack_tspectevent(void* Event, std::vector<uint8_t> *vec)
-{
-  int nchan = 64;
-  std::vector<uint8_t> data( vec->begin(), vec->end() );
-  SpectEvent_t *tmpEvent = (SpectEvent_t*)Event;
-
-  int index = 0;
-  int sd = sizeof(double);
-  switch(sd)
-  {
-    case 8:
-      tmpEvent->tstamp_us = data.at(index); break;
-    case 16:
-      tmpEvent->tstamp_us = FERSunpack16(index, data); break;
-    case 32:
-      tmpEvent->tstamp_us = FERSunpack32(index, data);
-  }
-  index += sd/8; // each element of data is uint8_t
-  tmpEvent->trigger_id = FERSunpack64( index,data); index += 8;
-  tmpEvent->chmask     = FERSunpack64( index,data); index += 8;
-  tmpEvent->qdmask     = FERSunpack64( index,data); index += 8;
-  for (int i=0; i<nchan; ++i) {
-    tmpEvent->energyHG[i] = FERSunpack16(index,data); index += 2;
-  }
-  for (int i=0; i<nchan; ++i) {
-    tmpEvent->energyLG[i] = FERSunpack16(index,data); index += 2;
-  }
-  for (int i=0; i<nchan; ++i) {
-    tmpEvent->tstamp[i] = FERSunpack32(index,data); index += 4;
-  }
-  for (int i=0; i<nchan; ++i) {
-    tmpEvent->ToT[i] = FERSunpack16(index,data); index += 2;
-  }
->>>>>>> 9fa59b14dcccc88ac13aa373662e2cd43a77e68c
 }
 
 
@@ -491,11 +346,7 @@ void FERSpack_countevent(void* Event, std::vector<uint8_t> *vec)
 {
   int nchan=64;
   CountingEvent_t* tmpEvent = (CountingEvent_t*) Event;
-<<<<<<< HEAD
   FERSpack( 8*sizeof(double), tmpEvent->tstamp_us,  vec);
-=======
-  FERSpack( sizeof(double), tmpEvent->tstamp_us,  vec);
->>>>>>> 9fa59b14dcccc88ac13aa373662e2cd43a77e68c
   FERSpack(	64, tmpEvent->trigger_id, vec);
   FERSpack(	64, tmpEvent->chmask, vec);
   for (size_t i = 0; i<nchan; i++){
@@ -504,7 +355,6 @@ void FERSpack_countevent(void* Event, std::vector<uint8_t> *vec)
   FERSpack(	32, tmpEvent->t_or_counts, vec);
   FERSpack(	32, tmpEvent->q_or_counts, vec);
 }
-<<<<<<< HEAD
 CountingEvent_t FERSunpack_countevent(std::vector<uint8_t> *vec)
 {
   int nchan=64;
@@ -519,7 +369,7 @@ CountingEvent_t FERSunpack_countevent(std::vector<uint8_t> *vec)
     case 16:
       tmpEvent.tstamp_us = FERSunpack16(index, data); break;
     case 32:
-      tmpEvent.tstamp_us = FERSunpack32(index, data);
+      tmpEvent.tstamp_us = FERSunpack32(index, data); break;
     case 64:
       tmpEvent.tstamp_us = FERSunpack64(index, data);
   }
@@ -532,32 +382,6 @@ CountingEvent_t FERSunpack_countevent(std::vector<uint8_t> *vec)
   tmpEvent.t_or_counts = FERSunpack32(index,data); index += 4;
   tmpEvent.q_or_counts = FERSunpack32(index,data); index += 4;
   return tmpEvent;
-=======
-void FERSunpack_countevent(void* Event, std::vector<uint8_t> *vec)
-{
-  int nchan=64;
-  std::vector<uint8_t> data( vec->begin(), vec->end() );
-  CountingEvent_t* tmpEvent = (CountingEvent_t*) Event;
-  int index = 0;
-  int sd = sizeof(double);
-  switch(sd)
-  {
-    case 8:
-      tmpEvent->tstamp_us = data.at(index); break;
-    case 16:
-      tmpEvent->tstamp_us = FERSunpack16(index, data); break;
-    case 32:
-      tmpEvent->tstamp_us = FERSunpack32(index, data);
-  }
-  index += sd/8; // each element of data is uint8_t
-  tmpEvent->trigger_id = FERSunpack64(index,data); index += 8;
-  tmpEvent->chmask = FERSunpack64(index,data); index += 8;
-  for (size_t i = 0; i<nchan; i++){
-    tmpEvent->counts[i] = FERSunpack32(index,data); index += 4;
-  }
-  tmpEvent->t_or_counts = FERSunpack32(index,data); index += 4;
-  tmpEvent->q_or_counts = FERSunpack32(index,data); index += 4;
->>>>>>> 9fa59b14dcccc88ac13aa373662e2cd43a77e68c
 }
 
 //////////////////////////
@@ -568,18 +392,13 @@ void FERSpack_waveevent(void* Event, std::vector<uint8_t> *vec)
 {
   int n = MAX_WAVEFORM_LENGTH;
   WaveEvent_t* tmpEvent = (WaveEvent_t*) Event;
-<<<<<<< HEAD
   FERSpack( 8*sizeof(double), tmpEvent->tstamp_us,  vec);
-=======
-  FERSpack( sizeof(double), tmpEvent->tstamp_us,  vec);
->>>>>>> 9fa59b14dcccc88ac13aa373662e2cd43a77e68c
   FERSpack(64, tmpEvent->trigger_id, vec);
   FERSpack(16, tmpEvent->ns, vec);
   for (int i=0; i<n; i++) FERSpack(16, tmpEvent->wave_hg[i], vec);
   for (int i=0; i<n; i++) FERSpack(16, tmpEvent->wave_lg[i], vec);
   for (int i=0; i<n; i++) vec->push_back(tmpEvent->dig_probes[i]);
 }
-<<<<<<< HEAD
 WaveEvent_t FERSunpack_waveevent(std::vector<uint8_t> *vec)
 {
   int n = MAX_WAVEFORM_LENGTH;
@@ -594,7 +413,7 @@ WaveEvent_t FERSunpack_waveevent(std::vector<uint8_t> *vec)
     case 16:
       tmpEvent.tstamp_us = FERSunpack16(index, data); break;
     case 32:
-      tmpEvent.tstamp_us = FERSunpack32(index, data);
+      tmpEvent.tstamp_us = FERSunpack32(index, data); break;
     case 64:
       tmpEvent.tstamp_us = FERSunpack64(index, data);
   }
@@ -611,36 +430,6 @@ WaveEvent_t FERSunpack_waveevent(std::vector<uint8_t> *vec)
     tmpEvent.dig_probes[i] = vec->at(index); index += 1;
   }
   return tmpEvent;
-=======
-void FERSunpack_waveevent(void* Event, std::vector<uint8_t> *vec)
-{
-  int n = MAX_WAVEFORM_LENGTH;
-  std::vector<uint8_t> data( vec->begin(), vec->end() );
-  WaveEvent_t* tmpEvent = (WaveEvent_t*) Event;
-  int index = 0;
-  int sd = sizeof(double);
-  switch(sd)
-  {
-    case 8:
-      tmpEvent->tstamp_us = data.at(index); break;
-    case 16:
-      tmpEvent->tstamp_us = FERSunpack16(index, data); break;
-    case 32:
-      tmpEvent->tstamp_us = FERSunpack32(index, data);
-  }
-  index += sd/8; // each element of data is uint8_t
-  tmpEvent->trigger_id = FERSunpack64(index,data); index += 8;
-  tmpEvent->ns = FERSunpack16(index,data); index += 2;
-  for (int i=0; i<n; i++){
-    tmpEvent->wave_hg[i] = FERSunpack16(index,data); index += 2;
-  }
-  for (int i=0; i<n; i++){
-    tmpEvent->wave_lg[i] = FERSunpack16(index,data); index += 2;
-  }
-  for (int i=0; i<n; i++){
-    tmpEvent->dig_probes[i] = vec->at(index); index += 1;
-  }
->>>>>>> 9fa59b14dcccc88ac13aa373662e2cd43a77e68c
 }
 
 //////////////////////////
@@ -651,16 +440,11 @@ void FERSpack_testevent(void* Event, std::vector<uint8_t> *vec)
 {
   int n = MAX_TEST_NWORDS;
   TestEvent_t* tmpEvent = (TestEvent_t*) Event;
-<<<<<<< HEAD
   FERSpack( 8*sizeof(double), tmpEvent->tstamp_us,  vec);
-=======
-  FERSpack( sizeof(double), tmpEvent->tstamp_us,  vec);
->>>>>>> 9fa59b14dcccc88ac13aa373662e2cd43a77e68c
   FERSpack(64, tmpEvent->trigger_id, vec);
   FERSpack(16, tmpEvent->nwords, vec);
   for (int i=0; i<n; i++) FERSpack(32, tmpEvent->test_data[i], vec);
 }
-<<<<<<< HEAD
 TestEvent_t FERSunpack_testevent(std::vector<uint8_t> *vec)
 {
   int n = MAX_TEST_NWORDS;
@@ -675,7 +459,7 @@ TestEvent_t FERSunpack_testevent(std::vector<uint8_t> *vec)
     case 16:
       tmpEvent.tstamp_us = FERSunpack16(index, data); break;
     case 32:
-      tmpEvent.tstamp_us = FERSunpack32(index, data);
+      tmpEvent.tstamp_us = FERSunpack32(index, data); break;
     case 64:
       tmpEvent.tstamp_us = FERSunpack64(index, data);
   }
@@ -686,29 +470,151 @@ TestEvent_t FERSunpack_testevent(std::vector<uint8_t> *vec)
     tmpEvent.test_data[i] = FERSunpack32(index, data); index+=4;
   }
   return tmpEvent;
-=======
-void FERSunpack_testevent(void* Event, std::vector<uint8_t> *vec)
-{
-  int n = MAX_TEST_NWORDS;
-  std::vector<uint8_t> data( vec->begin(), vec->end() );
-  TestEvent_t* tmpEvent = (TestEvent_t*) Event;
-  int index = 0;
-  int sd = sizeof(double);
-  switch(sd)
-  {
-    case 8:
-      tmpEvent->tstamp_us = data.at(index); break;
-    case 16:
-      tmpEvent->tstamp_us = FERSunpack16(index, data); break;
-    case 32:
-      tmpEvent->tstamp_us = FERSunpack32(index, data);
-  }
-  index += sd/8; // each element of data is uint8_t
-  tmpEvent->trigger_id  = FERSunpack64(index, data); index+=8; 
-  tmpEvent->nwords      = FERSunpack16(index, data); index+=2;
-  for (int i=0; i<n; i++){
-    tmpEvent->test_data[i] = FERSunpack32(index, data); index+=4;
-  }
->>>>>>> 9fa59b14dcccc88ac13aa373662e2cd43a77e68c
 }
 
+//////////////////////////
+//	uint16_t threshold;
+//	uint16_t dwell_time; // in seconds, divide hitcnt by this to get rate
+//	uint32_t chmean; // over channels, no division by time
+//	uint16_t shapingt; // enum, see FERS_Registers.h
+//	float    HV;
+//	uint32_t Tor_cnt;
+//	uint32_t Qor_cnt;
+//	uint32_t hitcnt[FERSLIB_MAX_NCH];
+//} StaircaseEvent_t;
+void FERSpack_staircaseevent(void* Event, std::vector<uint8_t> *vec){
+  int n = FERSLIB_MAX_NCH;
+  StaircaseEvent_t* tmpEvent = (StaircaseEvent_t*) Event;
+  FERSpack(16, tmpEvent->threshold, vec);
+  FERSpack(16, tmpEvent->dwell_time, vec);
+  FERSpack(32, tmpEvent->chmean, vec);
+  FERSpack(16, tmpEvent->shapingt, vec);
+  FERSpack( 8*sizeof(float), tmpEvent->HV,  vec);
+  FERSpack(32, tmpEvent->Tor_cnt, vec);
+  FERSpack(32, tmpEvent->Qor_cnt, vec);
+  for (int i=0; i<n; i++) FERSpack(32, tmpEvent->hitcnt[i], vec);
+
+  //std::cout<<"FERSpack_staircaseevent : tmpEvent->threshold  = "+std::to_string(tmpEvent->threshold)<<std::endl;
+  //std::cout<<"FERSpack_staircaseevent : tmpEvent->dwell_time = "+std::to_string(tmpEvent->dwell_time)<<std::endl;
+  //std::cout<<"FERSpack_staircaseevent : tmpEvent->chmean     = "+std::to_string(tmpEvent->chmean)<<std::endl;
+  //std::cout<<"FERSpack_staircaseevent : tmpEvent->shapingt   = "+std::to_string(tmpEvent->shapingt)<<std::endl;
+  //std::cout<<"FERSpack_staircaseevent : tmpEvent->HV         = "+std::to_string(tmpEvent->HV)<<std::endl;
+  //std::cout<<"FERSpack_staircaseevent : tmpEvent->Tor_cnt    = "+std::to_string(tmpEvent->Tor_cnt)<<std::endl;
+  //std::cout<<"FERSpack_staircaseevent : tmpEvent->Qor_cnt    = "+std::to_string(tmpEvent->Qor_cnt)<<std::endl;
+};
+StaircaseEvent_t FERSunpack_staircaseevent(std::vector<uint8_t> *vec){
+  int n = FERSLIB_MAX_NCH;
+  std::vector<uint8_t> data( vec->begin(), vec->end() );
+  StaircaseEvent_t tmpEvent;
+  int index = 0;
+  int sd = sizeof(float);
+  tmpEvent.threshold  = FERSunpack16(index, data); index+=2;
+  tmpEvent.dwell_time = FERSunpack16(index, data); index+=2;
+  tmpEvent.chmean     = FERSunpack32(index, data); index+=4;
+  tmpEvent.shapingt   = FERSunpack16(index, data); index+=2;
+  switch(8*sd)
+  {
+    case 8:
+      tmpEvent.HV = data.at(index); break;
+    case 16:
+      tmpEvent.HV = FERSunpack16(index, data); break;
+    case 32:
+      tmpEvent.HV = FERSunpack32(index, data); break;
+    case 64:
+      tmpEvent.HV = FERSunpack64(index, data);
+  }
+  index += sd;
+  tmpEvent.Tor_cnt  = FERSunpack32(index, data); index+=4; 
+  tmpEvent.Qor_cnt  = FERSunpack32(index, data); index+=4; 
+  for (int i=0; i<n; i++){
+    tmpEvent.hitcnt[i] = FERSunpack32(index, data); index+=4;
+  }
+  dump_vec("FERSunpack_staircaseevent",vec, 20);
+  //EUDAQ_WARN("FERSunpack_staircaseevent : tmpEvent.threshold  = "+std::to_string(tmpEvent.threshold) );
+  //EUDAQ_WARN("FERSunpack_staircaseevent : tmpEvent.dwell_time = "+std::to_string(tmpEvent.dwell_time));
+  //EUDAQ_WARN("FERSunpack_staircaseevent : tmpEvent.chmean     = "+std::to_string(tmpEvent.chmean)    );
+  //EUDAQ_WARN("FERSunpack_staircaseevent : tmpEvent.shapingt   = "+std::to_string(tmpEvent.shapingt)  );
+  //EUDAQ_WARN("FERSunpack_staircaseevent : tmpEvent.HV         = "+std::to_string(tmpEvent.HV)        );
+  //EUDAQ_WARN("FERSunpack_staircaseevent : tmpEvent.Tor_cnt    = "+std::to_string(tmpEvent.Tor_cnt)   );
+  //EUDAQ_WARN("FERSunpack_staircaseevent : tmpEvent.Qor_cnt    = "+std::to_string(tmpEvent.Qor_cnt)   );
+  return tmpEvent;
+
+};
+
+
+//////////////////////////
+// fill "data" with some info
+void make_header(int handle, uint8_t x_pixel, uint8_t y_pixel, int DataQualifier, std::vector<uint8_t> *data)
+{
+	uint8_t n=0;
+	std::vector<uint8_t> vec;
+
+	// this are needed
+	vec.push_back(x_pixel);
+	vec.push_back(y_pixel);
+	vec.push_back((uint8_t)DataQualifier);
+	n+=3;
+
+	// ID info:
+
+	// serial number
+	int sernum=0;
+	HV_Get_SerNum(handle, &sernum);
+	vec.push_back((uint8_t)sernum);
+	n++;
+
+	//handle
+	vec.push_back((uint8_t)handle);
+	n++;
+
+	// put everything in data, prefixing header with its size
+	data->push_back(n);
+	//std::cout<<"***** make header > going to write "<< std::to_string(n) <<" bytes" <<std::endl;
+	for (int i=0; i<n; i++)
+	{
+		//std::cout<<"***** make header > writing "<< std::to_string(vec.at(i)) <<std::endl;
+		data->push_back( vec.at(i) );
+	}
+}
+// reads back essential header info (see params)
+// prints them w/ board ID info with EUDAQ_WARN
+// returns index at which raw data starts
+int read_header(std::vector<uint8_t> *vec, uint8_t *x_pixel, uint8_t *y_pixel, uint8_t *DataQualifier)
+{
+	std::vector<uint8_t> data(vec->begin(), vec->end());
+	int index = data.at(0);
+	EUDAQ_WARN("read header > going to read " + std::to_string(index) +" bytes");
+
+	if(data.size() < index+1)
+		EUDAQ_THROW("Unknown data");
+	
+	*x_pixel = data.at(1);
+	*y_pixel = data.at(2);
+	*DataQualifier = data.at(3);
+
+	uint8_t sernum=data.at(4);
+	uint8_t handle=data.at(5);
+
+	std::string printme = "Monitor > received from FERS serial# "
+		+ std::to_string(sernum)
+		+" handle "+std::to_string(handle)
+		+" n "+std::to_string(index)
+		+" x "+std::to_string(*x_pixel)
+		+" y "+std::to_string(*y_pixel)
+		;
+	EUDAQ_WARN(printme);
+
+	return index+1; // first header byte is header size, then index bytes
+};
+
+// dump a vector
+void dump_vec(std::string title, std::vector<uint8_t> *vec, int limit){
+	int n = vec->size();
+	if (limit > 0) n = std::min(n, limit);
+	std::string printme;
+	for (int i=0; i<n; i++){
+		printme = "--- "+title+" > vec[" + std::to_string(i) + "] = "+ std::to_string( vec->at(i) );
+		//std::cout << printme <<std::endl;
+		EUDAQ_WARN( printme );
+	}
+};
