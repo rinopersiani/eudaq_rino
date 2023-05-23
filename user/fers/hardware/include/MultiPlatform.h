@@ -56,21 +56,13 @@
 	#include <unistd.h>
 	#include <errno.h>
 
-	#include <endian.h>
+	#include <endian.h> // linux
+	//#include <machine/endian.h> // macos
 #endif
 
 
 // Socket definition
-#ifdef linux
-typedef int							f_socket_t;			//!< Return type of socket(). On Linux socket() returns int.
-#define f_socket_errno				errno				//!< On Linux socket-related functions set the error into errno variable.
-#define f_socket_h_errno			h_errno				//!< On Linux network database operations like gethostbyname() set the error into h_errno variable.
-#define f_socket_invalid			(-1)				//!< On Windows functions like accept() return INVALID_SOCKET in case of error. On Linux they return -1.
-#define f_socket_error				(-1)				//!< On Windows functions like send() return SOCKET_ERROR in case of error. On Linux they return -1.
-#define f_socket_close(f_sock)		close(f_sock)		//!< On Windows closesocket. On linux close>
-#define f_socket_cleanup()								//!< On Windows WSACleanup. On linux "do nothing">
-
-#else
+#ifdef _WIN32
 typedef SOCKET						f_socket_t;			//!< Return type of socket(). On Windows socket() returns SOCKET.
 typedef int							ssize_t;			//!< Used on Linux as return type of send() an recv(). On Windows they return int.
 #define f_socket_errno				WSAGetLastError()	//!< On Windows socket-related functions set an error retrievable from WSAGetLastError()
@@ -79,6 +71,15 @@ typedef int							ssize_t;			//!< Used on Linux as return type of send() an recv
 #define f_socket_error				SOCKET_ERROR		//!< On Windows functions like send() return SOCKET_ERROR in case of error. On Linux they return -1.
 #define f_socket_close(f_sock)		closesocket(f_sock)	//!< On Windows closesocket. On linux close>
 #define f_socket_cleanup()			WSACleanup()		//!< On Windows WSACleanup. On linux "do nothing">
+
+#else
+typedef int							f_socket_t;			//!< Return type of socket(). On Linux socket() returns int.
+#define f_socket_errno				errno				//!< On Linux socket-related functions set the error into errno variable.
+#define f_socket_h_errno			h_errno				//!< On Linux network database operations like gethostbyname() set the error into h_errno variable.
+#define f_socket_invalid			(-1)				//!< On Windows functions like accept() return INVALID_SOCKET in case of error. On Linux they return -1.
+#define f_socket_error				(-1)				//!< On Windows functions like send() return SOCKET_ERROR in case of error. On Linux they return -1.
+#define f_socket_close(f_sock)		close(f_sock)		//!< On Windows closesocket. On linux close>
+#define f_socket_cleanup()								//!< On Windows WSACleanup. On linux "do nothing">
 
 
 #endif // linux
@@ -98,9 +99,7 @@ typedef int							ssize_t;			//!< Used on Linux as return type of send() an recv
 
 	uint64_t get_time();
 
-#endif
-
-#ifdef linux
+#else
 
 	// LINUX VERSION NOT TESTED!!!
 	typedef pthread_mutex_t			mutex_t;
