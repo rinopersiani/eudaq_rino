@@ -526,6 +526,11 @@ void FERSProducer::RunLoop(){
 			if ( DataQualifier >0 ) {
 				std::vector<uint8_t> data;
 				//make_header(handle, x_pixel, y_pixel, DataQualifier, &data);
+				
+				//Bug fix (it needs to implement the event with both HG and LG)
+				//At the moment the next line offer a simple solution to overcome this problem
+				if(DataQualifier==17) DataQualifier=1;
+				
 				make_header(brd, DataQualifier, &data);
 				std::cout<<"producer > " << "x_pixel: " <<	x_pixel << " y_pixel: " << y_pixel << " DataQualifier : " <<	DataQualifier << std::endl;
 				FERSpackevent(Event, DataQualifier, &data);
