@@ -1,7 +1,7 @@
 EUDAQ version 2
 =====
 
-[![Build Status](https://travis-ci.com/eudaq/eudaq.svg?branch=master)](https://travis-ci.com/eudaq/eudaq)
+![Github actions](https://github.com/eudaq/eudaq/actions/workflows/cmake.yml/badge.svg)
 [![Build status](https://ci.appveyor.com/api/projects/status/n3tq45kkupyvjihg/branch/master?svg=true)](https://ci.appveyor.com/project/eudaq/eudaq/branch/master)
 
 EUDAQ is a Generic Multi-platform Data Acquisition Framework.
@@ -62,6 +62,7 @@ ROOT 6 is required for the Online Monitor GUI.
 - MuPix8: No readme given, as only converter
 - [PI Stages](user/piStage/README.md): Producer to control the rotation and translation stages from PI
 - [experimental](user/experimental/README.md): developed, not tested (with hardware)
+- [ITS3](user/ITS3/README.md): producers, converters and miscellaneous sripts used in ITS3 testbeams
 
 
 ## Compiling and installation

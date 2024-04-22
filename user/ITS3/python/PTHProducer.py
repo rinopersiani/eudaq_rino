@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 
 import pyeudaq
-import serial
-from pth import *
+from labequipment import PTH
 from time import sleep
 from datetime import datetime
 import threading
+from utils import exception_handler
 
 class PTHProducer(pyeudaq.Producer):
     def __init__(self,name,runctrl):
@@ -16,44 +16,43 @@ class PTHProducer(pyeudaq.Producer):
         self.idev=0
         self.isev=0
         self.lock=threading.Lock()
+        self.lastP=0
+        self.lastT=0
+        self.lastH=0
 
+    @exception_handler
     def DoInitialise(self):
         self.pth=PTH()
         self.idev=0
         self.isev=0
 
+    @exception_handler
     def DoConfigure(self):
         self.idev=0
         self.isev=0
 
+    @exception_handler
     def DoStartRun(self):
         self.is_running=True
         self.idev=0
         self.isev=0
-        
+
+    @exception_handler
     def DoStopRun(self):
         self.is_running=False
 
+    @exception_handler
     def DoReset(self):
         self.is_running=False
 
+    @exception_handler
     def DoStatus(self):
-        self.SetStatusTag('StatusEventN','%d'%self.isev);
-        self.SetStatusTag('DataEventN'  ,'%d'%self.idev);
-        with self.lock:
-            if self.pth:
-                self.SetStatusMsg('%.2f degC | %.2f mbar | %.2f rel%%'%(self.pth.getT(),self.pth.getP(),self.pth.getH()))
+        self.SetStatusTag('StatusEventN','%d'%self.isev)
+        self.SetStatusTag('DataEventN'  ,'%d'%self.idev)
+        self.SetStatusMsg('%.2f degC | %.2f mbar | %.2f rel%%'%(self.lastT,self.lastP,self.lastH))
 
+    @exception_handler
     def RunLoop(self):
-        self.idev=0
-        self.isev=0
-        # TODO: status events
-        try:
-            self.foo()
-        except Exception as e:
-            print(e)
-            raise
-    def foo(self):
         self.send_status_event(time=datetime.now(),bore=True)
         self.isev+=1
         while self.is_running:
@@ -67,9 +66,12 @@ class PTHProducer(pyeudaq.Producer):
         ev=pyeudaq.Event('RawEvent',self.name+'_status')
         ev.SetTag('Time'       ,time.isoformat())
         with self.lock:
-            ev.SetTag('Pressure'   ,'%.2f mbar' %self.pth.getP())
-            ev.SetTag('Temperature','%.2f degC' %self.pth.getT())
-            ev.SetTag('Humidity'   ,'%.2f rel%%'%self.pth.getH())
+            self.lastP = self.pth.getP()
+            self.lastT = self.pth.getT()
+            self.lastH = self.pth.getH()
+            ev.SetTag('Pressure'   ,'%.2f mbar' %self.lastP)
+            ev.SetTag('Temperature','%.2f degC' %self.lastT)
+            ev.SetTag('Humidity'   ,'%.2f rel%%'%self.lastH)
         if bore:
             ev.SetBORE()
         if eore:
